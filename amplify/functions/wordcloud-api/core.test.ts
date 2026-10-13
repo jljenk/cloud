@@ -52,6 +52,27 @@ const revealed = await handleRequest(
   }),
 );
 assert.equal(revealed.statusCode, 200);
+assert.equal((revealed.body as { revealed: boolean }).revealed, true);
+
+const hidden = await handleRequest(
+  store,
+  call('POST', `/clouds/${createdBody.id}/hide`, undefined, {
+    'x-admin-secret': createdBody.adminSecret,
+  }),
+);
+assert.equal(hidden.statusCode, 200);
+assert.equal((hidden.body as { revealed: boolean }).revealed, false);
+
+const hiddenDenied = await handleRequest(store, call('POST', `/clouds/${createdBody.id}/hide`));
+assert.equal(hiddenDenied.statusCode, 401);
+
+const afterHide = await handleRequest(
+  store,
+  call('GET', `/clouds/${createdBody.id}/admin`, undefined, {
+    'x-admin-secret': createdBody.adminSecret,
+  }),
+);
+assert.equal((afterHide.body as { revealed: boolean }).revealed, false);
 
 const tooLong = await handleRequest(
   store,

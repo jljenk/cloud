@@ -27,6 +27,7 @@ export type Store = {
   get(id: string): Promise<CloudRecord | null>;
   addSubmission(id: string, submission: Submission): Promise<'ok' | 'missing' | 'full'>;
   reveal(id: string): Promise<'ok' | 'missing'>;
+  hide(id: string): Promise<'ok' | 'missing'>;
 };
 
 export type ApiResult = {
@@ -61,10 +62,10 @@ export function createMemoryStore(): Store {
       return 'ok';
     },
     async reveal(id) {
-      const record = clouds.get(id);
-      if (!record) return 'missing';
-      record.revealed = true;
-      return 'ok';
+      return setStoredVisibility(clouds, id, true);
+    },
+    async hide(id) {
+      return setStoredVisibility(clouds, id, false);
     },
   };
 }
@@ -108,7 +109,11 @@ export async function handleRequest(store: Store, request: ApiRequest): Promise<
   }
 
   if (method === 'POST' && parts.length === 3 && parts[2] === 'reveal') {
-    return revealCloud(store, id, request.headers);
+    return setVisibility(store, id, request.headers, true);
+  }
+
+  if (method === 'POST' && parts.length === 3 && parts[2] === 'hide') {
+    return setVisibility(store, id, request.headers, false);
   }
 
   return json(404, { error: 'Not found' });
@@ -178,18 +183,30 @@ async function readAdminCloud(
   });
 }
 
-async function revealCloud(
+async function setVisibility(
   store: Store,
   id: string,
   headers: Record<string, string | undefined>,
+  revealed: boolean,
 ): Promise<ApiResult> {
   const record = await store.get(id);
   if (!record) return json(404, { error: 'Not found' });
   if (!isAdmin(record, headers)) return json(401, { error: 'Unauthorized' });
 
-  const result = await store.reveal(id);
+  const result = revealed ? await store.reveal(id) : await store.hide(id);
   if (result === 'missing') return json(404, { error: 'Not found' });
-  return json(200, { revealed: true });
+  return json(200, { revealed });
+}
+
+function setStoredVisibility(
+  clouds: Map<string, CloudRecord>,
+  id: string,
+  revealed: boolean,
+): 'ok' | 'missing' {
+  const record = clouds.get(id);
+  if (!record) return 'missing';
+  record.revealed = revealed;
+  return 'ok';
 }
 
 function isAdmin(record: CloudRecord, headers: Record<string, string | undefined>): boolean {

@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { WordCloud } from '../components/WordCloud';
-import { ApiError, getAdminCloud, revealCloud } from '../lib/api';
+import { ApiError, getAdminCloud, hideCloud, revealCloud } from '../lib/api';
 
 type Summary = {
   title: string;
@@ -20,16 +20,18 @@ export function AdminPage() {
   const [view, setView] = useState<CloudView | null>(null);
   const [fatal, setFatal] = useState('');
   const [actionError, setActionError] = useState('');
-  const [pending, setPending] = useState(false);
+  const [pending, setPending] = useState<'show' | 'hide' | 'update' | null>(null);
+  const actionGen = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
     let timer = 0;
 
     async function tick() {
+      const genAtStart = actionGen.current;
       try {
         const cloud = await getAdminCloud(id, secret);
-        if (cancelled) return;
+        if (cancelled || actionGen.current !== genAtStart) return;
         setSummary({
           title: cloud.title,
           revealed: cloud.revealed,
@@ -43,9 +45,11 @@ export function AdminPage() {
               count: cloud.submissionCount,
             };
           });
+        } else {
+          setView(null);
         }
       } catch (err) {
-        if (cancelled) return;
+        if (cancelled || actionGen.current !== genAtStart) return;
         if (err instanceof ApiError && (err.status === 401 || err.status === 404)) {
           setFatal(err.status === 404 ? 'This word cloud does not exist.' : 'This admin link is not valid.');
           window.clearInterval(timer);
@@ -62,11 +66,13 @@ export function AdminPage() {
   }, [id, secret]);
 
   async function onShow() {
-    setPending(true);
+    const gen = ++actionGen.current;
+    setPending('show');
     setActionError('');
     try {
       await revealCloud(id, secret);
       const cloud = await getAdminCloud(id, secret);
+      if (actionGen.current !== gen) return;
       setSummary({
         title: cloud.title,
         revealed: true,
@@ -77,17 +83,37 @@ export function AdminPage() {
         count: cloud.submissionCount,
       });
     } catch (err) {
+      if (actionGen.current !== gen) return;
       setActionError(err instanceof ApiError ? err.message : 'Could not show the cloud.');
     } finally {
-      setPending(false);
+      finishAction(gen);
+    }
+  }
+
+  async function onHide() {
+    const gen = ++actionGen.current;
+    setPending('hide');
+    setActionError('');
+    try {
+      await hideCloud(id, secret);
+      if (actionGen.current !== gen) return;
+      setSummary((current) => (current ? { ...current, revealed: false } : current));
+      setView(null);
+    } catch (err) {
+      if (actionGen.current !== gen) return;
+      setActionError(err instanceof ApiError ? err.message : 'Could not hide the cloud.');
+    } finally {
+      finishAction(gen);
     }
   }
 
   async function onUpdate() {
-    setPending(true);
+    const gen = ++actionGen.current;
+    setPending('update');
     setActionError('');
     try {
       const cloud = await getAdminCloud(id, secret);
+      if (actionGen.current !== gen) return;
       setSummary({
         title: cloud.title,
         revealed: cloud.revealed,
@@ -98,10 +124,17 @@ export function AdminPage() {
         count: cloud.submissionCount,
       });
     } catch (err) {
+      if (actionGen.current !== gen) return;
       setActionError(err instanceof ApiError ? err.message : 'Could not update the cloud.');
     } finally {
-      setPending(false);
+      finishAction(gen);
     }
+  }
+
+  function finishAction(gen: number) {
+    if (actionGen.current !== gen) return;
+    actionGen.current += 1;
+    setPending(null);
   }
 
   if (fatal) {
@@ -125,10 +158,13 @@ export function AdminPage() {
     return (
       <main className="cloud-screen">
         <p className="cloud-title">{summary.title}</p>
+        <button className="secondary hide-cloud" type="button" onClick={() => void onHide()} disabled={pending !== null}>
+          {pending === 'hide' ? 'Hiding…' : 'Hide word cloud'}
+        </button>
         <WordCloud texts={view.texts} />
         {newer > 0 ? (
-          <button className="secondary update-cloud" type="button" onClick={() => void onUpdate()} disabled={pending}>
-            {pending ? 'Updating…' : `Update cloud (${newer} new)`}
+          <button className="secondary update-cloud" type="button" onClick={() => void onUpdate()} disabled={pending !== null}>
+            {pending === 'update' ? 'Updating…' : `Update cloud (${newer} new)`}
           </button>
         ) : null}
         {actionError ? <p className="toast-error">{actionError}</p> : null}
@@ -144,8 +180,8 @@ export function AdminPage() {
       <p className="count">{summary.submissionCount}</p>
       <p className="lede">{responses}</p>
       {actionError ? <p className="form-error">{actionError}</p> : null}
-      <button className="primary show-button" type="button" onClick={() => void onShow()} disabled={pending}>
-        {pending ? 'Showing…' : 'Show word cloud'}
+      <button className="primary show-button" type="button" onClick={() => void onShow()} disabled={pending !== null}>
+        {pending === 'show' ? 'Showing…' : 'Show word cloud'}
       </button>
       <p className="hint">Participants cannot see this screen.</p>
     </main>

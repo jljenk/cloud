@@ -52,8 +52,15 @@ export function getAdminCloud(id: string, secret: string): Promise<AdminCloud> {
   });
 }
 
-export function revealCloud(id: string, secret: string): Promise<{ revealed: true }> {
+export function revealCloud(id: string, secret: string): Promise<{ revealed: boolean }> {
   return request(`/clouds/${id}/reveal`, {
+    method: 'POST',
+    headers: { 'x-admin-secret': secret },
+  });
+}
+
+export function hideCloud(id: string, secret: string): Promise<{ revealed: boolean }> {
+  return request(`/clouds/${id}/hide`, {
     method: 'POST',
     headers: { 'x-admin-secret': secret },
   });

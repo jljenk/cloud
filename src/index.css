@@ -230,11 +230,21 @@ input[type='text'] {
   color: var(--muted);
 }
 
-.update-cloud {
+.update-cloud,
+.hide-cloud {
   position: fixed;
+  z-index: 1;
+  background: #1d222b;
+}
+
+.update-cloud {
   right: 20px;
   bottom: 20px;
-  background: #1d222b;
+}
+
+.hide-cloud {
+  top: 16px;
+  right: 20px;
 }
 
 .toast-error {

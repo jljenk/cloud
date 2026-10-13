@@ -93,24 +93,31 @@ function createDynamoStore(): Store {
         return existing ? 'full' : 'missing';
       }
     },
-    async reveal(id) {
-      try {
-        await documentClient.send(
-          new UpdateCommand({
-            TableName: tableName(),
-            Key: { id },
-            UpdateExpression: 'SET revealed = :revealed',
-            ConditionExpression: 'attribute_exists(id)',
-            ExpressionAttributeValues: { ':revealed': true },
-          }),
-        );
-        return 'ok';
-      } catch (error) {
-        if (!isConditionalCheckFailed(error)) throw error;
-        return 'missing';
-      }
+    reveal(id) {
+      return setRevealed(id, true);
+    },
+    hide(id) {
+      return setRevealed(id, false);
     },
   };
+}
+
+async function setRevealed(id: string, revealed: boolean): Promise<'ok' | 'missing'> {
+  try {
+    await documentClient.send(
+      new UpdateCommand({
+        TableName: tableName(),
+        Key: { id },
+        UpdateExpression: 'SET revealed = :revealed',
+        ConditionExpression: 'attribute_exists(id)',
+        ExpressionAttributeValues: { ':revealed': revealed },
+      }),
+    );
+    return 'ok';
+  } catch (error) {
+    if (!isConditionalCheckFailed(error)) throw error;
+    return 'missing';
+  }
 }
 
 function tableName(): string {

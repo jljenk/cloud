@@ -4,27 +4,46 @@ import { defineConfig, type Plugin } from 'vite'
 import { createMemoryStore, handleRequest, type Store } from './amplify/functions/wordcloud-api/core.ts'
 
 const devApiPort = 8787
-let apiServer: Server | undefined
+const devApiGlobal = globalThis as typeof globalThis & { __wordCloudDevApi?: Server }
 
 function devApi(): Plugin {
   return {
     name: 'wordcloud-dev-api',
-    configureServer(viteServer) {
-      if (apiServer?.listening) return
+    async configureServer(viteServer) {
+      if (devApiGlobal.__wordCloudDevApi) {
+        await closeServer(devApiGlobal.__wordCloudDevApi)
+        devApiGlobal.__wordCloudDevApi = undefined
+      }
 
       const store = createMemoryStore()
-      apiServer = createServer((request, response) => {
+      const apiServer = createServer((request, response) => {
         void handleNodeRequest(store, request, response)
+      })
+      devApiGlobal.__wordCloudDevApi = apiServer
+      apiServer.on('error', (error: NodeJS.ErrnoException) => {
+        if (error.code === 'EADDRINUSE') {
+          console.warn(`Word cloud dev API is already listening on ${devApiPort}`)
+          return
+        }
+        console.error(error)
       })
       apiServer.listen(devApiPort, () => {
         console.log(`Word cloud dev API at http://localhost:${devApiPort}`)
       })
       viteServer.httpServer?.on('close', () => {
-        apiServer?.close()
-        apiServer = undefined
+        void closeServer(apiServer)
+        if (devApiGlobal.__wordCloudDevApi === apiServer) {
+          devApiGlobal.__wordCloudDevApi = undefined
+        }
       })
     },
   }
+}
+
+function closeServer(server: Server): Promise<void> {
+  return new Promise((resolve) => {
+    server.close(() => resolve())
+  })
 }
 
 async function handleNodeRequest(store: Store, request: IncomingMessage, response: ServerResponse) {
