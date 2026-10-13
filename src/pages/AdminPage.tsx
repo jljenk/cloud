@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { ParticipantQr } from '../components/ParticipantQr';
 import { WordCloud } from '../components/WordCloud';
 import { ApiError, getAdminCloud, hideCloud, revealCloud } from '../lib/api';
 
@@ -173,10 +174,12 @@ export function AdminPage() {
   }
 
   const responses = summary.submissionCount === 1 ? 'response' : 'responses';
+  const participantUrl = `${window.location.origin}/c/${id}`;
 
   return (
-    <main className="stage">
+    <main className="stage admin-wait">
       <p className="eyebrow">{summary.title}</p>
+      <ParticipantQr url={participantUrl} />
       <p className="count">{summary.submissionCount}</p>
       <p className="lede">{responses}</p>
       {actionError ? <p className="form-error">{actionError}</p> : null}

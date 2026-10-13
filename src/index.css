@@ -141,6 +141,38 @@ input[type='text'] {
   font-size: 1.2rem;
 }
 
+.admin-wait .count {
+  font-size: clamp(4rem, 14vw, 8rem);
+}
+
+.admin-wait .lede {
+  margin-bottom: 16px;
+}
+
+.qr-block {
+  margin: 4px 0 8px;
+}
+
+.qr-card {
+  background: #f3efe6;
+  border-radius: 18px;
+  padding: 12px;
+  line-height: 0;
+}
+
+.qr-card img,
+.qr-placeholder {
+  width: min(240px, 32vh);
+  height: min(240px, 32vh);
+  display: block;
+}
+
+.qr-block figcaption {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
 .text-button {
   margin-top: 22px;
   padding: 0;
