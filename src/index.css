@@ -237,14 +237,60 @@ input[type='text'] {
   background: #101318;
 }
 
+.cloud-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-areas: 'title toggle hide';
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px 28px;
+  background: linear-gradient(180deg, #101318 0%, #101318 68%, transparent 100%);
+  pointer-events: none;
+}
+
+.cloud-bar > * {
+  pointer-events: auto;
+}
+
 .cloud-title {
-  position: absolute;
-  top: 18px;
-  left: 22px;
+  grid-area: title;
   margin: 0;
   color: var(--muted);
   font-size: 0.95rem;
-  z-index: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.view-toggle {
+  grid-area: toggle;
+  justify-self: center;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: #1d222b;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.view-toggle button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-weight: 700;
+}
+
+.view-toggle button[aria-pressed='true'] {
+  background: var(--gold);
+  color: var(--gold-ink);
 }
 
 .cloud-svg {
@@ -264,19 +310,70 @@ input[type='text'] {
 
 .update-cloud,
 .hide-cloud {
-  position: fixed;
   z-index: 1;
   background: #1d222b;
 }
 
 .update-cloud {
+  position: fixed;
   right: 20px;
   bottom: 20px;
 }
 
 .hide-cloud {
-  top: 16px;
-  right: 20px;
+  grid-area: hide;
+  justify-self: end;
+}
+
+.response-table-wrap {
+  min-height: 100vh;
+  padding: 108px 24px 96px;
+  overflow: auto;
+}
+
+.response-table {
+  width: min(720px, 100%);
+  margin: 0 auto;
+  border-collapse: collapse;
+}
+
+.response-table caption {
+  margin-bottom: 18px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  text-align: left;
+}
+
+.response-table th {
+  padding: 0 16px 12px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: left;
+}
+
+.response-table td {
+  padding: 16px;
+  border-top: 1px solid var(--line);
+  font-size: clamp(1.2rem, 2.4vw, 1.8rem);
+  line-height: 1.3;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .cloud-bar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'title hide'
+      'toggle toggle';
+  }
+
+  .response-table-wrap {
+    padding-top: 148px;
+  }
 }
 
 .toast-error {

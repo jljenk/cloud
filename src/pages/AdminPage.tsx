@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { ParticipantQr } from '../components/ParticipantQr';
+import { ResponseTable } from '../components/ResponseTable';
 import { WordCloud } from '../components/WordCloud';
 import { ApiError, getAdminCloud, hideCloud, revealCloud } from '../lib/api';
+import { shuffleItems } from '../lib/shuffle';
+
+const EMPTY_TEXTS: readonly string[] = [];
 
 type Summary = {
   title: string;
@@ -22,7 +26,19 @@ export function AdminPage() {
   const [fatal, setFatal] = useState('');
   const [actionError, setActionError] = useState('');
   const [pending, setPending] = useState<'show' | 'hide' | 'update' | null>(null);
+  const [viewMode, setViewMode] = useState<'cloud' | 'table'>('cloud');
   const actionGen = useRef(0);
+  const responseTexts = view?.texts ?? EMPTY_TEXTS;
+  const responseKey = responseTexts.join('\u0000');
+  const [shuffled, setShuffled] = useState(() => ({
+    key: responseKey,
+    rows: shuffleItems(responseTexts),
+  }));
+  let tableRows = shuffled.rows;
+  if (shuffled.key !== responseKey) {
+    tableRows = shuffleItems(responseTexts);
+    setShuffled({ key: responseKey, rows: tableRows });
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -158,11 +174,21 @@ export function AdminPage() {
     const newer = summary.submissionCount - view.count;
     return (
       <main className="cloud-screen">
-        <p className="cloud-title">{summary.title}</p>
-        <button className="secondary hide-cloud" type="button" onClick={() => void onHide()} disabled={pending !== null}>
-          {pending === 'hide' ? 'Hiding…' : 'Hide word cloud'}
-        </button>
-        <WordCloud texts={view.texts} />
+        <header className="cloud-bar">
+          <p className="cloud-title">{summary.title}</p>
+          <div className="view-toggle" role="group" aria-label="View">
+            <button type="button" aria-pressed={viewMode === 'cloud'} onClick={() => setViewMode('cloud')}>
+              Cloud
+            </button>
+            <button type="button" aria-pressed={viewMode === 'table'} onClick={() => setViewMode('table')}>
+              Table
+            </button>
+          </div>
+          <button className="secondary hide-cloud" type="button" onClick={() => void onHide()} disabled={pending !== null}>
+            {pending === 'hide' ? 'Hiding…' : 'Hide word cloud'}
+          </button>
+        </header>
+        {viewMode === 'table' ? <ResponseTable texts={tableRows} /> : <WordCloud texts={view.texts} />}
         {newer > 0 ? (
           <button className="secondary update-cloud" type="button" onClick={() => void onUpdate()} disabled={pending !== null}>
             {pending === 'update' ? 'Updating…' : `Update cloud (${newer} new)`}

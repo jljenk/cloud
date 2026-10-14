@@ -105,15 +105,27 @@ export type CountedWord = {
   count: number;
 };
 
+function normalizePhrase(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[’]/g, "'")
+    .replace(/[^a-z0-9'\s-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, '');
+}
+
+function hasContent(phrase: string): boolean {
+  return phrase.split(' ').some((token) => token.length >= 2 && !STOP_WORDS.has(token));
+}
+
 export function countWords(texts: string[]): CountedWord[] {
   const counts = new Map<string, number>();
 
   for (const text of texts) {
-    const tokens = text.toLowerCase().match(/[a-z0-9]+/g) ?? [];
-    for (const token of tokens) {
-      if (token.length < 2 || STOP_WORDS.has(token)) continue;
-      counts.set(token, (counts.get(token) ?? 0) + 1);
-    }
+    const phrase = normalizePhrase(text);
+    if (!phrase || !hasContent(phrase)) continue;
+    counts.set(phrase, (counts.get(phrase) ?? 0) + 1);
   }
 
   return [...counts.entries()]
